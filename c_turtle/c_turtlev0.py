@@ -10,6 +10,7 @@ from geometry_msgs.msg import Twist, Pose2D
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from flatland_msgs.srv import MoveModel
+import csv
 
 LASER_RANGE = 3
 LASER_FREQ = 10
@@ -27,6 +28,11 @@ RAD112_5 = radians(112.5)
 RAD135 = radians(135)
 RAD157_5 = radians(157.5)
 
+def create_csv():
+    with open('odometry.csv', 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["seq","sec","x","y"])
+
 
 def clamp(val, minVal, maxVal):
     return float(max(min(val, maxVal), minVal))
@@ -41,7 +47,7 @@ def laserToPoint(laser):
 
 class CTurtle(Node):
     doStop = True
-    doOdometry = False
+    doOdometry = True
 
     maxLinVel = 2.0
     maxAngVel = 3.0
@@ -49,6 +55,7 @@ class CTurtle(Node):
     linDec = 3.0
     angAcc = 4.0
     angDec = 4.0
+    seq = 0
 
     minDistFromWall = 1.0
     k = 3
@@ -56,14 +63,14 @@ class CTurtle(Node):
     def __init__(self) -> None:
         super().__init__("CTurtle")
 
-        # self.doOdometry = self.get_parameter("~do-odometry")
-        # self.doStop = self.get_parameter("~do-stop")
-        # self.maxLinVel = self.get_parameter("~max-linVel")
-        # self.maxAngVel = self.get_parameter("~max-angVel")
-        # self.linAcc = self.get_parameter("~linAcc")
-        # self.linDec = self.get_parameter("~linDec")
-        # self.angAcc = self.get_parameter("~angAcc")
-        # self.angDec = self.get_parameter("~angDec")
+        # self.doOdometry = self.get_parameter("do-odometry")
+        # self.doStop = self.get_parameter("do-stop")
+        # self.maxLinVel = self.get_parameter("max-linVel")
+        # self.maxAngVel = self.get_parameter("max-angVel")
+        # self.linAcc = self.get_parameter("linAcc")
+        # self.linDec = self.get_parameter("linDec")
+        # self.angAcc = self.get_parameter("angAcc")
+        # self.angDec = self.get_parameter("angDec")
 
         self.vel = Twist()
 
@@ -78,9 +85,13 @@ class CTurtle(Node):
         self.create_subscription(LaserScan, "/scan", self._scanCallback, 1)
 
     def _odometryGroundTruth(self, odometry):
-        print(
-            f"{odometry.header.seq},{odometry.header.stamp.secs + odometry.header.stamp.nsecs / 1000000000},{odometry.pose.pose.position.x},{odometry.pose.pose.position.y}"
-        )
+        self.seq += 1
+        #print(
+        #    f"{self.seq},{odometry.header.stamp.sec + odometry.header.stamp.nanosec / 1000000000},{odometry.pose.pose.position.x},{odometry.pose.pose.position.y}"
+        #)
+        with open('odometry.csv', 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([self.seq,odometry.header.stamp.sec + odometry.header.stamp.nanosec / 1000000000,odometry.pose.pose.position.x,odometry.pose.pose.position.y])
 
     def _scanCallback(self, scan):
         lasers = [0] * len(scan.ranges)
