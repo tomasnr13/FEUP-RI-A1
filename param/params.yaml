@@ -1,6 +1,6 @@
 do-reset: True
 do-stop: True
-do-odometry: False
+do-odometry: True
 max-linVel: 2.0
 linAcc: 1.5
 linDec: 3.0
