@@ -15,7 +15,7 @@ import csv
 LASER_RANGE = 3
 LASER_FREQ = 10
 
-STOP_WALL_LEN = 1.95
+STOP_WALL_LEN = 4.18
 STOP_TOLERANCE = 0.1
 STOP_MIN = STOP_WALL_LEN * (1 - STOP_TOLERANCE)
 STOP_MAX = STOP_WALL_LEN * (1 + STOP_TOLERANCE)
@@ -53,8 +53,8 @@ class CTurtle(Node):
     maxAngVel = 3.0
     linAcc = 1.5
     linDec = 3.0
-    angAcc = 4.0
-    angDec = 4.0
+    angAcc = 6.0
+    angDec = 6.0
     seq = 0
 
     minDistFromWall = 1.0

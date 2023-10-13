@@ -1,7 +1,7 @@
 properties: {}
 layers:
   - name: "map"
-    map: "c.yaml"
+    map: "question.yaml"
     color: [1.0, 1.0, 1.0, 1]
 models:
   - name: CTurtle
