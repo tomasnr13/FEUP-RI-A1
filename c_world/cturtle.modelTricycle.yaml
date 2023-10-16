@@ -145,7 +145,7 @@ plugins:
       name: lidar
       body: base
       topic: scan
-      range: 3
+      range: 5
       angle:
           {
               min: -2.356194490192345,

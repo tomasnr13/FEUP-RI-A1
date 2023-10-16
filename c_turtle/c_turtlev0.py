@@ -11,12 +11,8 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from flatland_msgs.srv import MoveModel
 import csv
+from .params import *
 
-LASER_RANGE = 3
-LASER_FREQ = 10
-
-STOP_WALL_LEN = 4.18
-STOP_TOLERANCE = 0.1
 STOP_MIN = STOP_WALL_LEN * (1 - STOP_TOLERANCE)
 STOP_MAX = STOP_WALL_LEN * (1 + STOP_TOLERANCE)
 
@@ -29,7 +25,7 @@ RAD135 = radians(135)
 RAD157_5 = radians(157.5)
 
 def create_csv():
-    with open('odometry.csv', 'w', newline='') as file:
+    with open(FILENAME, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["seq","sec","x","y"])
 
@@ -48,32 +44,15 @@ def laserToPoint(laser):
 class CTurtle(Node):
     doStop = True
     doOdometry = True
-
-    maxLinVel = 2.0
-    maxAngVel = 3.0
-    linAcc = 1.5
-    linDec = 3.0
-    angAcc = 6.0
-    angDec = 6.0
     seq = 0
 
-    minDistFromWall = 1.0
     k = 3
 
     def __init__(self) -> None:
         super().__init__("CTurtle")
 
-        # self.doOdometry = self.get_parameter("do-odometry")
-        # self.doStop = self.get_parameter("do-stop")
-        # self.maxLinVel = self.get_parameter("max-linVel")
-        # self.maxAngVel = self.get_parameter("max-angVel")
-        # self.linAcc = self.get_parameter("linAcc")
-        # self.linDec = self.get_parameter("linDec")
-        # self.angAcc = self.get_parameter("angAcc")
-        # self.angDec = self.get_parameter("angDec")
-
         self.vel = Twist()
-
+        
         self.pub:Publisher = self.create_publisher(Twist, "/cmd_vel", 1)
         if CTurtle.doOdometry:
             print('"seq","sec","x","y"')
@@ -89,7 +68,7 @@ class CTurtle(Node):
         #print(
         #    f"{self.seq},{odometry.header.stamp.sec + odometry.header.stamp.nanosec / 1000000000},{odometry.pose.pose.position.x},{odometry.pose.pose.position.y}"
         #)
-        with open('odometry.csv', 'a', newline='') as file:
+        with open(FILENAME, 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([self.seq,odometry.header.stamp.sec + odometry.header.stamp.nanosec / 1000000000,odometry.pose.pose.position.x,odometry.pose.pose.position.y])
 
@@ -210,7 +189,7 @@ class CTurtle(Node):
             self.wiggle()
             return
 
-        if CTurtle.doStop and abs(minDist - CTurtle.minDistFromWall) < 0.1 * CTurtle.k:
+        if CTurtle.doStop and abs(minDist - MIN_DIST_FROM_WALL) < 0.1 * CTurtle.k:
             if (
                 dirs["edges"]["back_left"] == inf
                 and STOP_MIN < dirs["edges"]["left"] < STOP_MAX
@@ -240,7 +219,7 @@ class CTurtle(Node):
                 dirs["front_right"]["dist"],
                 dirs["front_left"]["dist"],
             )
-        self.linVel = CTurtle.maxLinVel * front / LASER_RANGE
+        self.linVel = MAX_LIN_VEL * front / LASER_RANGE
 
         if minDir == "front":
             if dirs["left"]["dist"] == inf and dirs["right"]["dist"] != inf:
@@ -262,9 +241,9 @@ class CTurtle(Node):
             wallSide = "right"
 
         if wallSide == "left":
-            angDistTerm = cos(minAng) + (CTurtle.minDistFromWall - minDist)
+            angDistTerm = cos(minAng) + (MIN_DIST_FROM_WALL - minDist)
         else:
-            angDistTerm = cos(pi - minAng) + (minDist - CTurtle.minDistFromWall)
+            angDistTerm = cos(pi - minAng) + (minDist - MIN_DIST_FROM_WALL)
         self.angVel = -CTurtle.k * self.linVel * angDistTerm
 
         self.moveTurtle()
@@ -275,23 +254,23 @@ class CTurtle(Node):
 
     @linVel.setter
     def linVel(self, newLinVel):
-        desiredVel = clamp(newLinVel, -CTurtle.maxLinVel, CTurtle.maxLinVel)
+        desiredVel = clamp(newLinVel, -MAX_LIN_VEL, MAX_LIN_VEL)
 
         # v = v0 + a * t
         # desiredVel = self.linVel + a * (1/LASER_FREQ)
         a = (desiredVel - self.linVel) * LASER_FREQ
         if a > 0:
-            if a <= CTurtle.linAcc:
+            if a <= LIN_ACC:
                 self.vel.linear.x = desiredVel
             else:
                 # exceeded max acceleration
-                self.vel.linear.x = self.linVel + CTurtle.linAcc / LASER_FREQ
+                self.vel.linear.x = self.linVel + LIN_ACC / LASER_FREQ
         elif a < 0:
-            if a >= CTurtle.linDec:
+            if a >= LIN_DEC:
                 self.vel.linear.x = desiredVel
             else:
                 # exceeded max decelaration
-                self.vel.linear.x = self.linVel - CTurtle.linDec / LASER_FREQ
+                self.vel.linear.x = self.linVel - LIN_DEC / LASER_FREQ
 
     @property
     def angVel(self):
@@ -299,32 +278,32 @@ class CTurtle(Node):
 
     @angVel.setter
     def angVel(self, newAngVel):
-        desiredVel = clamp(newAngVel, -CTurtle.maxAngVel, CTurtle.maxAngVel)
+        desiredVel = clamp(newAngVel, -MAX_ANG_VEL, MAX_ANG_VEL)
 
         a = (desiredVel - self.angVel) * LASER_FREQ
         if a > 0:
-            if a <= CTurtle.angAcc:
+            if a <= ANG_ACC:
                 self.vel.angular.z = desiredVel
             else:
                 # exceeded max acceleration
-                self.vel.angular.z = self.angVel + CTurtle.angAcc / LASER_FREQ
+                self.vel.angular.z = self.angVel + ANG_ACC / LASER_FREQ
         elif a < 0:
-            if a >= CTurtle.angDec:
+            if a >= ANG_DEC:
                 self.vel.angular.z = desiredVel
             else:
                 # exceeded max decelaration
-                self.vel.angular.z = self.angVel - CTurtle.angDec / LASER_FREQ
+                self.vel.angular.z = self.angVel - ANG_DEC / LASER_FREQ
 
     def wiggle(self):
         #  rospy.loginfo("wiggling")
-        self.linVel = self.maxLinVel
-        v = CTurtle.maxAngVel * random()
+        self.linVel = MAX_LIN_VEL
+        v = MAX_ANG_VEL * random()
         if random() > 0.5:
             self.angVel += v
         else:
             self.angVel -= v
         # reset wandering angle when limit reached
-        if abs(self.angVel) >= CTurtle.maxAngVel:
+        if abs(self.angVel) >= MAX_ANG_VEL:
             self.angVel = 0
 
         self.moveTurtle()
@@ -332,27 +311,11 @@ class CTurtle(Node):
     def moveTurtle(self):
         self.pub.publish(self.vel)
 
-    # def reset(self):
-    #     vel = Twist()
-    #     vel.linear.x = 0
-    #     vel.angular.z = 0
-    #     self.pub.publish(vel)
-
-    #     client = self.create_client(MoveModel, "/move_model")
-    #     client.wait_for_service()
-    #     request = MoveModel.Request()
-    #     request.name = "CTurtle"
-    #     request.pose = Pose2D(uniform(-6, 6), uniform(-5, 7), uniform(0, 359))
-    #     client.call(request)
-
 
 def main(args = None):
     rclpy.init()
     
     cTurtle = CTurtle()
-
-    # if cTurtle.get_parameter("~do-reset"):
-    #     cTurtle.reset()
 
     cTurtle.subScan()
     rclpy.spin(cTurtle)
