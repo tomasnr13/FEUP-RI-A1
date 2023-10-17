@@ -37,11 +37,11 @@ def write_constants_and_execute():
         FILENAME = f"\'odometry_{MAX_LIN_VEL}_{MAX_ANG_VEL}_{LIN_ACC}_{LIN_DEC}_{ANG_ACC}_{ANG_DEC}_{MIN_DIST_FROM_WALL}_{LASER_RANGE}_{LASER_FREQ}_{STOP_WALL_LEN}_{STOP_TOLERANCE}.csv\'"
         constants_code = constants_code_template.format(MAX_LIN_VEL, MAX_ANG_VEL, LIN_ACC, LIN_DEC, ANG_ACC, ANG_DEC, MIN_DIST_FROM_WALL, LASER_RANGE, LASER_FREQ, STOP_WALL_LEN, STOP_TOLERANCE, FILENAME)
 
-        with open('./src/c_turtle/params.py', 'w') as f:
+        with open('./src/turtle/params.py', 'w') as f:
             f.write(constants_code)
 
         subprocess.run(['colcon', 'build'])
         subprocess.run(['source', 'install/setup.bash'], shell=True)
-        subprocess.run(['ros2', 'launch', 'c_turtle', 'c_turtle.launch.py'])
+        subprocess.run(['ros2', 'launch', 'turtle', 'turtle.launch.py'])
 
 write_constants_and_execute()
