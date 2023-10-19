@@ -63,7 +63,7 @@ class Turtle(Node):
         #self._writeToFile(f'Angular: {twist_ang}')
         self.publisher.publish(self.twist)
 
-    def _getLeftLaser(lidar):
+    def _getLeftLaser(self, lidar):
         closest_pair = None
         min_angle_difference = float('inf')
 
@@ -87,53 +87,59 @@ class Turtle(Node):
         #  move forward and adapt angular velocity so the left laser distance keeps the same values
         #  if laser distance increases, rotate counterclockwise and vice versa
 
-        self._writeToFile('reacttoLidar')
-
-        self._writeToFile("lidar is" + str(lidar))
-
         wall_detected = self._detectWall(lidar)
 
         if wall_detected:
+
+            #TODO: caso em que paramos
+            #TODO: por a seguir a parede tbm à direita
+
             min_angle = self.min_distance_laser[0]
             min_dist = self.min_distance_laser[1]
-
-            self._writeToFile(f'min ang: {min_angle}')
-            self._writeToFile(f'min dist: {min_dist}')
 
             leftLaser = self._getLeftLaser(lidar)
 
             #robot moving parallel to wall
             if self.min_distance_laser == leftLaser:
-                twist_ang = 0
-                twist_lin = self.linear_speed
-                
+                self.twist.angular.z = 0
+
+                #TODO mudar para alteração mais gradual da velocidade 
+                self.twist.linear.x = MAX_LIN_VEL
+                                
             #add logic to follow wall
 
             #robot moving forward to the wall - angle 0 (+-0.1) must be the one with less distance 
-            elif min_angle < 0.1 & min_angle > -0.1:
+            elif (min_angle < 0.1) & (min_angle > -0.1):
                 twist_ang = 0
                 #if its too far from the wall, aproach
-                if min_dist > WALL_DISTANCE + WALL_DISTANCE_THRESHOLD:
-                    twist_lin = self.linear_speed
+                if min_dist > (WALL_DISTANCE + WALL_DISTANCE_THRESHOLD):
+                    
+                    #TODO mudar para alteração mais gradual da velocidade angular
+                    self.twist.angular.z = MAX_ANG_VEL
+                    
                 #if its too close from the wall, go back
-                elif min_dist < WALL_DISTANCE - WALL_DISTANCE_THRESHOLD:
-                    twist_lin = -self.linear_speed
+                elif min_dist < (WALL_DISTANCE - WALL_DISTANCE_THRESHOLD):
+                    #TODO mudar para alteração mais gradual da velocidade angular
+                    self.twist.angular.z = -MAX_ANG_VEL
+                    
                 else:
                     # robot is within distance, pointing to the wall
-                    twist_lin = 0
+                    self.twist.angular.z = 0
                     #rotate clockwise to make perpendicular to wall
-                    twist_ang = self.angular_speed
-                    self._writeToFile('Rotating')
+
+                    #TODO mudar para alteração mais gradual da velocidade angular
+                    self.twist.angular.z = MAX_ANG_VEL
+
             #robot still not aligned to wall
             elif min_angle > 0.5:
-                twist_ang = self.angular_speed
-                twist_lin = 0
+                #TODO mudar para alteração mais gradual da velocidade angular
+                self.twist.angular.z = MAX_ANG_VEL
+                self.twist.linear.x = 0
             elif min_angle < -0.5:
-                twist_ang = -self.angular_speed
-                twist_lin = 0
-            
-            # twist_ang =self.angular_speed
-            # twist_lin = 0.0
+                #TODO mudar para alteração mais gradual da velocidade 
+                self.twist.angular.z = -MAX_ANG_VEL
+                self.twist.linear.x = 0
+
             self._moveRobot(twist_lin, twist_ang)
         else:
             self.randomWalk()
