@@ -101,7 +101,7 @@ class Turtle(Node):
 
             #robot moving parallel to wall
             if self.min_distance_laser == leftLaser:
-                self.twist.angular.z = 0
+                self.twist.angular.z = 0.0
 
                 #TODO mudar para alteração mais gradual da velocidade 
                 self.twist.linear.x = MAX_LIN_VEL
@@ -110,7 +110,6 @@ class Turtle(Node):
 
             #robot moving forward to the wall - angle 0 (+-0.1) must be the one with less distance 
             elif (min_angle < 0.1) & (min_angle > -0.1):
-                twist_ang = 0
                 #if its too far from the wall, aproach
                 if min_dist > (WALL_DISTANCE + WALL_DISTANCE_THRESHOLD):
                     
@@ -124,7 +123,7 @@ class Turtle(Node):
                     
                 else:
                     # robot is within distance, pointing to the wall
-                    self.twist.angular.z = 0
+                    self.twist.angular.z = 0.0
                     #rotate clockwise to make perpendicular to wall
 
                     #TODO mudar para alteração mais gradual da velocidade angular
@@ -134,13 +133,13 @@ class Turtle(Node):
             elif min_angle > 0.5:
                 #TODO mudar para alteração mais gradual da velocidade angular
                 self.twist.angular.z = MAX_ANG_VEL
-                self.twist.linear.x = 0
+                self.twist.linear.x = 0.0
             elif min_angle < -0.5:
                 #TODO mudar para alteração mais gradual da velocidade 
                 self.twist.angular.z = -MAX_ANG_VEL
-                self.twist.linear.x = 0
+                self.twist.linear.x = 0.0
 
-            self._moveRobot(twist_lin, twist_ang)
+            self._moveRobot()
         else:
             self.randomWalk()
 
