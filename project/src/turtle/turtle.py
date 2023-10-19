@@ -10,14 +10,18 @@ from geometry_msgs.msg import Twist, Pose2D
 from sensor_msgs.msg import LaserScan
 
 WALL_DISTANCE_THRESHOLD = 2
+WALL_DISTANCE_THRESHOLD_MIN = 1.0
+WALL_DISTANCE_THRESHOLD_MAX = 2.5
 WALL_DISTANCE = 1
 EDGE_DISTANCE = 1
 MAX_ANG_VEL = 3.0
 MAX_LIN_VEL = 2.0
-
-def clamp(val, minVal, maxVal):
-    return float(max(min(val, maxVal), minVal))
-
+LOW_LIN_VEL = 0.5
+ANGLE_LOOSENESS = 0.1
+MAX_ANGLE = 2.356194347143173
+MIN_ANGLE = -2.356194347143173
+ANG_INCREMENT = 0.1
+LIN_VEL_DECREMENT = 0.5
 class Turtle(Node):
     def __init__(self) -> None:
         super().__init__("Turtle")
@@ -96,6 +100,97 @@ class Turtle(Node):
         
 
     def _reactToLidar(self, lidar):
+        if not self._detectWall(lidar):
+            self.randomWalk()
+
+        else:
+
+            min_angle, min_dist = self.min_distance_laser
+            if abs((abs(min_angle) - pi/2)) < ANGLE_LOOSENESS:
+                self.twist.linear.x = MAX_LIN_VEL
+                self.twist.angular.z = 0.0
+
+
+
+            elif min_dist < WALL_DISTANCE_THRESHOLD_MIN:
+                if (self.twist.linear.x > LOW_LIN_VEL):
+                    self.twist.linear.x -= LIN_VEL_DECREMENT
+
+                #if(self.twist.angular.z < pi/2):
+                if(self.twist.angular.z < pi):
+                    self.twist.angular.z += ANG_INCREMENT
+
+            elif min_dist > WALL_DISTANCE_THRESHOLD_MAX:
+                if(min_angle < 0.0):
+                    self.twist.angular.z = ANG_INCREMENT
+                else:
+                    self.twist.angular.z = -ANG_INCREMENT
+            else:
+                self.twist.linear.x = (1 - ((abs(min_angle) - MAX_ANGLE) / (MAX_ANGLE))) * MAX_LIN_VEL
+
+                if min_angle < 0.0:
+                    if min_angle < -pi/2:
+                        self.twist.angular.z = -ANG_INCREMENT
+                    else:
+                        self.twist.angular.z = ANG_INCREMENT
+                else:
+                    if min_angle > pi/2:
+                        self.twist.angular.z = ANG_INCREMENT
+                    else:
+                        self.twist.angular.z = -ANG_INCREMENT
+
+        self._moveRobot()
+
+        '''
+            leftLaser = self._getLeftLaser(lidar)
+
+            #robot moving parallel to wall
+            if self.min_distance_laser == leftLaser:
+                # Calculate the difference between the current and desired distances
+                distance_error = leftLaser[1] - WALL_DISTANCE
+
+                # Adjust angular velocity based on this difference
+                self.twist.angular.z = clamp(distance_error, -MAX_ANG_VEL, MAX_ANG_VEL)
+
+                self.twist.linear.x = MAX_LIN_VEL
+                                
+            #add logic to follow wall
+
+            #robot moving forward to the wall - angle 0 (+-0.1) must be the one with less distance 
+            elif (min_angle < 0.1) & (min_angle > -0.1):
+                #if its too far from the wall, aproach
+                if min_dist > (WALL_DISTANCE + WALL_DISTANCE_THRESHOLD):
+                    
+                    #TODO mudar para alteração mais gradual da velocidade angular
+                    self.twist.angular.z += MAX_ANG_VEL
+                    
+                #if its too close from the wall, go back
+                elif min_dist < (WALL_DISTANCE - WALL_DISTANCE_THRESHOLD):
+                    #TODO mudar para alteração mais gradual da velocidade angular
+                    self.twist.angular.z = -MAX_ANG_VEL
+                    
+                else:
+                    # robot is within distance, pointing to the wall
+                    self.twist.angular.z = 0.0
+                    #rotate clockwise to make perpendicular to wall
+
+                    #TODO mudar para alteração mais gradual da velocidade angular
+                    self.twist.angular.z = MAX_ANG_VEL
+
+            #robot still not aligned to wall
+            elif min_angle > 0.5:
+                #TODO mudar para alteração mais gradual da velocidade angular
+                self.twist.angular.z = MAX_ANG_VEL
+                self.twist.linear.x = 0.0
+            elif min_angle < -0.5:
+                #TODO mudar para alteração mais gradual da velocidade 
+                self.twist.angular.z = -MAX_ANG_VEL
+                self.twist.linear.x = 0.0
+            self._moveRobot()
+        '''
+
+    '''
+    def _reactToLidar(self, lidar):
 
         if not self._detectWall(lidar):
             self.randomWalk()
@@ -151,7 +246,7 @@ class Turtle(Node):
                 self.twist.angular.z = -MAX_ANG_VEL
                 self.twist.linear.x = 0.0
             self._moveRobot()
-
+    '''
     #wiggle
     def randomWalk(self):
         v = MAX_ANG_VEL * random()
