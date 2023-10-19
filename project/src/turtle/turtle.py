@@ -10,7 +10,7 @@ from geometry_msgs.msg import Twist, Pose2D
 from sensor_msgs.msg import LaserScan
 
 WALL_DISTANCE_THRESHOLD = 2
-WALL_DISTANCE = 0.5
+WALL_DISTANCE = 1
 EDGE_DISTANCE = 1
 MAX_ANG_VEL = 3.0
 MAX_LIN_VEL = 2.0
@@ -47,20 +47,18 @@ class Turtle(Node):
         self._reactToLidar(lidar)
 
     def _detectWall(self, lidar):
+        # replace nans with inf
+        lidar = [(angle, inf) if isnan(distance) else (angle, distance) for angle, distance in lidar]
         min_distance_laser = min(lidar, key=lambda x: x[1])
         min_dist = min_distance_laser[1]
-        if not isnan(min_dist):
+        if min_dist is inf:
+            return False
+        else:
             self.min_distance_laser = min_distance_laser
             return True
-        else:
-            return False
 
-    def _moveRobot(self): #self, twist_lin, twist_ang):
-        #self.twist.linear.x = twist_lin
-        #self.twist.angular.z = twist_ang
-        #self._writeToFile('[MOVE]')
-        #self._writeToFile(f'Linear: {twist_lin}')
-        #self._writeToFile(f'Angular: {twist_ang}')
+
+    def _moveRobot(self): 
         self.publisher.publish(self.twist)
 
     def _getLeftLaser(self, lidar):
@@ -78,32 +76,26 @@ class Turtle(Node):
 
 
     def _reactToLidar(self, lidar):
-        #detect wall
-        #if wall is not detected
-        #    move randomly
-        #if wall is detected
-        #  move towards it frontwise until it reaches threshold
-        #  when robot is within wall threshold, rotate 90 degrees so he is parallel to the wall, with the wall on his left side
-        #  move forward and adapt angular velocity so the left laser distance keeps the same values
-        #  if laser distance increases, rotate counterclockwise and vice versa
 
-        wall_detected = self._detectWall(lidar)
+        if not self._detectWall(lidar):
+            self.randomWalk()
 
-        if wall_detected:
-
+        else:
             #TODO: caso em que paramos
             #TODO: por a seguir a parede tbm à direita
 
-            min_angle = self.min_distance_laser[0]
-            min_dist = self.min_distance_laser[1]
+            min_angle, min_dist = self.min_distance_laser
 
             leftLaser = self._getLeftLaser(lidar)
 
             #robot moving parallel to wall
             if self.min_distance_laser == leftLaser:
-                self.twist.angular.z = 0.0
+                # Calculate the difference between the current and desired distances
+                distance_error = leftLaser[1] - WALL_DISTANCE
 
-                #TODO mudar para alteração mais gradual da velocidade 
+                # Adjust angular velocity based on this difference
+                self.twist.angular.z = clamp(distance_error, -MAX_ANG_VEL, MAX_ANG_VEL)
+
                 self.twist.linear.x = MAX_LIN_VEL
                                 
             #add logic to follow wall
@@ -114,7 +106,7 @@ class Turtle(Node):
                 if min_dist > (WALL_DISTANCE + WALL_DISTANCE_THRESHOLD):
                     
                     #TODO mudar para alteração mais gradual da velocidade angular
-                    self.twist.angular.z = MAX_ANG_VEL
+                    self.twist.angular.z += MAX_ANG_VEL
                     
                 #if its too close from the wall, go back
                 elif min_dist < (WALL_DISTANCE - WALL_DISTANCE_THRESHOLD):
@@ -138,10 +130,7 @@ class Turtle(Node):
                 #TODO mudar para alteração mais gradual da velocidade 
                 self.twist.angular.z = -MAX_ANG_VEL
                 self.twist.linear.x = 0.0
-
             self._moveRobot()
-        else:
-            self.randomWalk()
 
     #wiggle
     def randomWalk(self):
