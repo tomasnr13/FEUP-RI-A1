@@ -1,5 +1,3 @@
-
-# Constants
 MAX_LIN_VEL = 2.0
 MAX_ANG_VEL = 3.0
 LIN_ACC = 1.5

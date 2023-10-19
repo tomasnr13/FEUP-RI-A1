@@ -12,7 +12,7 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from flatland_msgs.srv import MoveModel
 import csv
-from .params import *
+from params import *
 
 STOP_MIN = STOP_WALL_LEN * (1 - STOP_TOLERANCE)
 STOP_MAX = STOP_WALL_LEN * (1 + STOP_TOLERANCE)

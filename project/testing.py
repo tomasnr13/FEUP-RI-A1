@@ -27,7 +27,7 @@ def write_constants_and_execute():
     ANG_ACC = 6.0
     ANG_DEC = 6.0
     MIN_DIST_FROM_WALL = 1.0
-    LASER_RANGE = 3
+    LASER_RANGE = 5
     LASER_FREQ = 10
     STOP_WALL_LEN = 4.18
     STOP_TOLERANCE = 0.1

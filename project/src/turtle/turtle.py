@@ -8,30 +8,25 @@ from rclpy.publisher import Publisher
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, Pose2D
 from sensor_msgs.msg import LaserScan
-# from nav_msgs.msg import Odometry
-# from flatland_msgs.srv import MoveModel
 
 WALL_DISTANCE_THRESHOLD = 2
 WALL_DISTANCE = 0.5
 EDGE_DISTANCE = 1
+MAX_ANG_VEL = 3.0
+MAX_LIN_VEL = 2.0
 
 def clamp(val, minVal, maxVal):
     return float(max(min(val, maxVal), minVal))
 
-class CTurtle(Node):
+class Turtle(Node):
     def __init__(self) -> None:
-        super().__init__("CTurtle")
+        super().__init__("Turtle")
         self.twist = Twist()
         self.publisher:Publisher = self.create_publisher(Twist, "/cmd_vel", 1)
         self.min_distance_laser = (0,0)
 
-        self.linear_speed = 0.5
-        self.angular_speed = 0.5
-
         self.file_path = 'data.txt'
         open(self.file_path, 'w').close()
-        #identify version to see if colcon built the right one
-        self._writeToFile('v3') 
 
         self.create_subscription(LaserScan, "/scan", self._processScan, 1)
 
@@ -40,10 +35,6 @@ class CTurtle(Node):
             file.write(line + '\n')
 
     def _processScan(self, scan):
-        self._writeToFile('processScan')
-        self._writeToFile('[LIDAR]')
-
-
         lidar = []
         angle = scan.angle_min
         self._writeToFile('lasers')
@@ -56,21 +47,20 @@ class CTurtle(Node):
         self._reactToLidar(lidar)
 
     def _detectWall(self, lidar):
-        self._writeToFile('reacttoLidar')
         min_distance_laser = min(lidar, key=lambda x: x[1])
         min_dist = min_distance_laser[1]
-        if min_dist != inf & min_dist is not None:
+        if not isnan(min_dist):
             self.min_distance_laser = min_distance_laser
             return True
         else:
             return False
 
-    def _moveRobot(self, twist_lin, twist_ang):
-        self.twist.linear.x = twist_lin
-        self.twist.angular.z = twist_ang
-        self._writeToFile('[MOVE]')
-        self._writeToFile(f'Linear: {twist_lin}')
-        self._writeToFile(f'Angular: {twist_ang}')
+    def _moveRobot(self): #self, twist_lin, twist_ang):
+        #self.twist.linear.x = twist_lin
+        #self.twist.angular.z = twist_ang
+        #self._writeToFile('[MOVE]')
+        #self._writeToFile(f'Linear: {twist_lin}')
+        #self._writeToFile(f'Angular: {twist_ang}')
         self.publisher.publish(self.twist)
 
     def _getLeftLaser(lidar):
@@ -98,6 +88,8 @@ class CTurtle(Node):
         #  if laser distance increases, rotate counterclockwise and vice versa
 
         self._writeToFile('reacttoLidar')
+
+        self._writeToFile("lidar is" + str(lidar))
 
         wall_detected = self._detectWall(lidar)
 
@@ -148,22 +140,22 @@ class CTurtle(Node):
 
     #wiggle
     def randomWalk(self):
-        twist_lin = 0.5
-        v = CTurtle.maxAngVel * random()
+        v = MAX_ANG_VEL * random()
         if random() > 0.5:
-            self.twist_ang += v
+            self.twist.angular.z += v
         else:
-            self.twist_ang -= v
+            self.twist.angular.z -= v
         # reset wandering angle when limit reached
-        if abs(self.twist_ang) >= CTurtle.maxAngVel:
-            twist_ang = 0
+        if abs(self.twist.angular.z) >= MAX_ANG_VEL:
+            self.twist.angular.z = 0.0
 
-        self._moveRobot(twist_lin, twist_ang)
+        self.twist.linear.x = MAX_LIN_VEL
+        self._moveRobot()
 
 
 def main(args = None):
     rclpy.init(args=args)
-    robot = CTurtle()
+    robot = Turtle()
     rclpy.spin(robot)
     robot.destroy_node()
     rclpy.shutdown()
