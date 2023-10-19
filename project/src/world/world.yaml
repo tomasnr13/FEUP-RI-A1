@@ -1,0 +1,8 @@
+properties: {}
+layers:
+  - name: "map"
+    map: "question.yaml"
+    color: [1.0, 1.0, 1.0, 1]
+models:
+  - name: CTurtle
+    model: "turtle.model.yaml"
