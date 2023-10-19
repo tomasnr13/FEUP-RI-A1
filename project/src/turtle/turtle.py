@@ -73,7 +73,27 @@ class Turtle(Node):
                 closest_pair = (angle, distance)
 
         return closest_pair
+    
+    def _detectEdges(self, lidar):
+        firstVertex = False
+        firstVertexLaser = ()
+        edge = False
 
+        for i in range(0, len(lidar)):
+            if lidar[i][1] == inf & (not firstVertex):
+                firstVertex = True
+            elif lidar[i][1] == inf & firstVertex & (not edge):
+                firstVertex = False
+            elif lidar[i][1] != inf & firstVertex & (not edge):
+                edge = True
+                firstVertexLaser = lidar[i]
+            elif lidar[i][1] == inf & firstVertex & edge:
+                return (firstVertexLaser,lidar[i-1])
+        return ()
+    
+    def _calculateDistLasers(self, laser1, laser2):
+        return sqrt(laser1[1]**2 + laser2[1]**2)
+        
 
     def _reactToLidar(self, lidar):
 
