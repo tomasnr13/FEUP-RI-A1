@@ -17,7 +17,7 @@ EDGE_DISTANCE = 1
 MAX_ANG_VEL = 3.0
 MAX_LIN_VEL = 2.0
 LOW_LIN_VEL = 0.5
-ANGLE_LOOSENESS = 0.2 
+ANGLE_LOOSENESS = 0.1
 MAX_ANGLE = 2.356194347143173
 MIN_ANGLE = -2.356194347143173
 ANG_INCREMENT = 0.1
@@ -86,20 +86,18 @@ class Turtle(Node):
         else:
 
             min_angle, min_dist = self.min_distance_laser
-
-            if (abs(min_angle) - pi/2) < ANGLE_LOOSENESS: 
+            if abs((abs(min_angle) - pi/2)) < ANGLE_LOOSENESS:
                 self.twist.linear.x = MAX_LIN_VEL
+                self.twist.angular.z = 0.0
 
 
 
-            if min_dist < WALL_DISTANCE_THRESHOLD_MIN:
+            elif min_dist < WALL_DISTANCE_THRESHOLD_MIN:
                 if (self.twist.linear.x > LOW_LIN_VEL):
                     self.twist.linear.x -= LIN_VEL_DECREMENT
-                #if(min_angle < 0.0):
-                #    self.twist.angular.z = -MAX_ANGLE
-                #else:
-                #    self.twist.angular.z = MAX_ANGLE
-                if(self.twist.angular.z < pi/4):
+
+                #if(self.twist.angular.z < pi/2):
+                if(self.twist.angular.z < pi):
                     self.twist.angular.z += ANG_INCREMENT
 
             elif min_dist > WALL_DISTANCE_THRESHOLD_MAX:
