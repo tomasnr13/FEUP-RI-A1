@@ -9,6 +9,7 @@ from rclpy.publisher import Publisher
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, Pose2D
 from sensor_msgs.msg import LaserScan
+import time
 
 WALL_DISTANCE_THRESHOLD = 2.5
 FINAL_WALL_LENGTH = 3.89
@@ -61,8 +62,6 @@ class Turtle(Node):
             self.min_distance_laser = min_distance_laser
             return True
     
-    def _calculateDistLasers(self, laser1, laser2):
-        return sqrt(laser1[1]**2 + laser2[1]**2)
 
     def _moveRobot(self): 
         self.publisher.publish(self.twist)
@@ -98,10 +97,11 @@ class Turtle(Node):
             print(fit_error,flush=True)
 
             # If the fit error is below a certain threshold, stop the robot
-            if fit_error < 2.0:  # Adjust this threshold as needed
+            if fit_error < 2.2:  # Adjust this threshold as needed
                 print("stop detected",flush=True)
                 self.twist.linear.x = 0.0
                 self.twist.angular.z = 0.0
+                self._moveRobot()
                 return True
 
         return False
@@ -118,10 +118,8 @@ class Turtle(Node):
         right_back_wall = any(distance < WALL_DISTANCE_THRESHOLD and not isnan(distance) for angle, distance in lidar if pi/2 <= angle <= pi)
         front_wall = any(distance < WALL_DISTANCE_THRESHOLD and not isnan(distance) for angle, distance in lidar if -pi/2 <= angle <= pi/2)
         
-
         # If a wall is detected on the left back or right back, stop moving linearly and rotate towards the wall
         if (left_back_wall or right_back_wall) and not front_wall:
-            print("corner detected",flush=True)
             self.twist.linear.x = 0.0
             self.twist.angular.z = -MAX_ANG_VEL*0.4 if left_back_wall else MAX_ANG_VEL*0.4
             self._moveRobot()
@@ -132,7 +130,7 @@ class Turtle(Node):
         else:
             return self._followWall(lidar)
         
-    def _normalizeAngle(self, value, range):
+    def _normalizeAsin(self, value, range):
         if value < -range:
             value = -range
         elif value > range:
@@ -154,15 +152,15 @@ class Turtle(Node):
             self.twist.linear.x = LOW_LIN_VEL
         elif distance > WALL_DISTANCE_THRESHOLD:
             # If we are farther from the wall than desired, turn towards the wall
-            # self.twist.angular.z = -MAX_ANG_VEL *(WALL_DISTANCE_THRESHOLD - distance)
-            self.twist.angular.z = -MAX_ANG_VEL *self._normalizeAngle(angle, pi/2)
+            self.twist.angular.z = -MAX_ANG_VEL *(WALL_DISTANCE_THRESHOLD - distance)
             self.twist.linear.x = LOW_LIN_VEL
 
         if frontDistance != inf:
             angleRobotWall = asin(max(-1, min(distance/frontDistance, 1)))
-            self.twist.angular.z += self._normalizeAngle(angleRobotWall, pi/2) * 2.0
+            self.twist.angular.z += self._normalizeAsin(angleRobotWall, pi/2) * 2.0
 
         self.twist.linear.x = MAX_LIN_VEL
+
         if angle > 0: 
             self.twist.angular.z = -self.twist.angular.z
         self._moveRobot()
