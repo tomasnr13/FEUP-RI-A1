@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import csv
 from random import random, uniform
 from math import radians, inf, isnan, pi, cos, sin, sqrt, asin
 from numpy import polyfit, polyval
@@ -7,7 +8,8 @@ from numpy import polyfit, polyval
 import rclpy
 from rclpy.publisher import Publisher
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, Pose2D
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 import time
 
@@ -31,11 +33,31 @@ class Turtle(Node):
 
         self.laserscan = self.create_subscription(LaserScan, "/scan", self._processScan, 1)
 
+
         #random orientation
         self.twist.angular.z = random()*2*pi-pi
         self._moveRobot()
         time.sleep(3)
+          
+        #create odometry register
+        self.seq = 0
+        self._create_odometry_register()
 
+        self.odometry = self.create_subscription(
+                Odometry, "/odometry/ground_truth", self._odometryGroundTruth, 1
+            )
+
+    def _create_odometry_register(self):
+        # Create a new file
+        with open('odometry.csv', 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["seq","time","x","y"])
+
+    def _odometryGroundTruth(self, odometry):
+        self.seq += 1
+        with open('odometry.csv', 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([self.seq,odometry.header.stamp.sec + odometry.header.stamp.nanosec / 1000000000,odometry.pose.pose.position.x,odometry.pose.pose.position.y])
 
     def _writeToFile(self, line):
         with open(self.file_path, 'a') as file:
@@ -113,6 +135,7 @@ class Turtle(Node):
         if self._detectStop(lidar):
             self._moveRobot()
             self.destroy_subscription(self.laserscan)
+            self.destroy_subscription(self.odometry)
             return
 
         # Check for walls on the left back or right back
