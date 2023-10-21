@@ -31,6 +31,12 @@ class Turtle(Node):
 
         self.laserscan = self.create_subscription(LaserScan, "/scan", self._processScan, 1)
 
+        #random orientation
+        self.twist.angular.z = random()*2*pi-pi
+        self._moveRobot()
+        time.sleep(3)
+
+
     def _writeToFile(self, line):
         with open(self.file_path, 'a') as file:
             file.write(line + '\n')
@@ -72,11 +78,12 @@ class Turtle(Node):
         lidar = [(angle, distance) for angle, distance in lidar if not isnan(distance)]
 
         # If there are not enough readings, return False
-        if len(lidar) < 2:
+        if len(lidar) < 3:
             return False
 
-        # Find the first and last non-nan values
+        # Find the first, middle and last non-nan values
         first_non_nan = lidar[0]
+        middle_non_nan = lidar[len(lidar) // 2]
         last_non_nan = lidar[-1]
 
         # Calculate the distance between the two points
@@ -86,25 +93,20 @@ class Turtle(Node):
 
         # Check if the distance is within the interval [3.89 +/- 0.1]
         if 3.79 <= laser_distance <= 3.99:
-            print("distance detected",flush=True)
-            # Fit a line to the data
-            angles = [angle for angle, distance in lidar]
-            distances = [distance for angle, distance in lidar]
-            coefficients = polyfit(angles, distances, 1)
-
-            # Measure how well the data fits this line
-            fit_error = sum((polyval(coefficients, angle) - distance)**2 for angle, distance in lidar)
-            print(fit_error,flush=True)
-
-            # If the fit error is below a certain threshold, stop the robot
-            if fit_error < 2.2:  # Adjust this threshold as needed
-                print("stop detected",flush=True)
-                self.twist.linear.x = 0.0
-                self.twist.angular.z = 0.0
-                self._moveRobot()
-                return True
+            if abs(first_non_nan[1]-last_non_nan[1]) < 0.1:
+                # Calculate the expected distance of the middle sensor using Pythagorean theorem
+                expected_middle_distance = sqrt((first_non_nan[1]**2 + last_non_nan[1]**2) / 4)
+                # Check if the actual middle sensor distance is close to the expected distance
+                if abs(middle_non_nan[1] - expected_middle_distance) < 0.1:
+                    for angle, distance in lidar:
+                        self._writeToFile(f'angle, dist: {str(angle)}, {str(distance)}')
+                    self.twist.linear.x = 0.0
+                    self.twist.angular.z = 0.0
+                    self._moveRobot()
+                    return True
 
         return False
+
 
     def _reactToLidar(self, lidar):
 
@@ -148,11 +150,11 @@ class Turtle(Node):
 
         if distance < WALL_DISTANCE_THRESHOLD:
             # If we are closer to the wall than desired, turn away from the wall
-            self.twist.angular.z = MAX_ANG_VEL * (WALL_DISTANCE_THRESHOLD - distance)
+            self.twist.angular.z = MAX_ANG_VEL * (WALL_DISTANCE_THRESHOLD - distance)*0.6
             self.twist.linear.x = LOW_LIN_VEL
         elif distance > WALL_DISTANCE_THRESHOLD:
             # If we are farther from the wall than desired, turn towards the wall
-            self.twist.angular.z = -MAX_ANG_VEL *(WALL_DISTANCE_THRESHOLD - distance)
+            self.twist.angular.z = -MAX_ANG_VEL *(WALL_DISTANCE_THRESHOLD - distance)*0.6
             self.twist.linear.x = LOW_LIN_VEL
 
         if frontDistance != inf:
