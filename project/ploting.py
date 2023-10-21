@@ -29,3 +29,25 @@ plt.title('Graph of y vs x with Time as color')
 
 # Show the plot
 plt.show()
+
+# ----------------------------
+# Calculate total time elapsed
+total_time_elapsed = df['time'].iloc[-1] - df['time'].iloc[0]
+
+# Calculate total distance traveled
+df['distance_traveled'] = np.sqrt(df['x'].diff()**2 + df['y'].diff()**2)
+total_distance_traveled = df['distance_traveled'].sum()
+
+# Calculate mean velocity for the entire journey
+mean_velocity = total_distance_traveled / total_time_elapsed
+
+# Create a new DataFrame to store these values
+data = pd.DataFrame({
+    'total_time_elapsed': [total_time_elapsed],
+    'total_distance_traveled': [total_distance_traveled],
+    'mean_velocity': [mean_velocity]
+})
+
+
+# Write the new data to a CSV file
+data.to_csv('data_info.csv', index=False)
