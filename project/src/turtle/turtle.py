@@ -155,7 +155,7 @@ class Turtle(Node):
         else:
             return self._followWall(lidar)
         
-    def _normalizeAsin(self, value, range):
+    def _normalizeAngle(self, value, range):
         if value < -range:
             value = -range
         elif value > range:
@@ -174,15 +174,15 @@ class Turtle(Node):
         if distance < WALL_DISTANCE_THRESHOLD:
             # If we are closer to the wall than desired, turn away from the wall
             self.twist.angular.z = MAX_ANG_VEL * (WALL_DISTANCE_THRESHOLD - distance)*0.6
-            self.twist.linear.x = LOW_LIN_VEL
         elif distance > WALL_DISTANCE_THRESHOLD:
             # If we are farther from the wall than desired, turn towards the wall
             self.twist.angular.z = -MAX_ANG_VEL *(WALL_DISTANCE_THRESHOLD - distance)*0.6
-            self.twist.linear.x = LOW_LIN_VEL
+            # self.twist.angular.z = -MAX_ANG_VEL *self._normalizeAngle(angle, pi/2)
 
         if frontDistance != inf:
             angleRobotWall = asin(max(-1, min(distance/frontDistance, 1)))
-            self.twist.angular.z += self._normalizeAsin(angleRobotWall, pi/2) * 2.0
+            self.twist.angular.z += self._normalizeAngle(angleRobotWall, pi/2) * 2.0
+
 
         self.twist.linear.x = MAX_LIN_VEL
 
