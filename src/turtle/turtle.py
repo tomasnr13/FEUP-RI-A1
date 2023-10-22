@@ -13,10 +13,8 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 import time
 
-WALL_DISTANCE_THRESHOLD = 2.5
+WALL_DISTANCE_THRESHOLD = 2.5 #2.0, 2.5, 3.0
 FINAL_WALL_LENGTH = 3.89
-
-
 MAX_ANG_VEL = 3.0
 MAX_LIN_VEL = 2.5
 
@@ -27,6 +25,7 @@ class Turtle(Node):
         self.publisher:Publisher = self.create_publisher(Twist, "/cmd_vel", 1)
         self.min_distance_laser = (0,0)
 
+        #debug
         self.file_path = 'data.txt'
         open(self.file_path, 'w').close()
 
@@ -57,7 +56,7 @@ class Turtle(Node):
         with open('odometry.csv', 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([self.seq,odometry.header.stamp.sec + odometry.header.stamp.nanosec / 1000000000,odometry.pose.pose.position.x,odometry.pose.pose.position.y])
-
+    #debug
     def _writeToFile(self, line):
         with open(self.file_path, 'a') as file:
             file.write(line + '\n')
@@ -65,11 +64,9 @@ class Turtle(Node):
     def _processScan(self, scan):
         lidar = []
         angle = scan.angle_min
-        self._writeToFile('lasers')
         for i in range(len(scan.ranges)):
             distance = scan.ranges[i]
             lidar.append((angle, distance))
-            self._writeToFile(f'angle, dist: {str(angle)}, {str(distance)}')
             angle += scan.angle_increment
 
         self._reactToLidar(lidar)
@@ -114,7 +111,7 @@ class Turtle(Node):
 
         # Check if the distance is within the interval [3.89 +/- 0.1]
         if 3.79 <= laser_distance <= 3.99:
-            if abs(first_non_nan[1]-last_non_nan[1]) < 0.1:
+            if abs(first_non_nan[1]-last_non_nan[1]) < 0.5:
                 # Calculate the expected distance of the middle sensor using Pythagorean theorem
                 expected_middle_distance = sqrt((first_non_nan[1]**2 + last_non_nan[1]**2) / 4)
                 # Check if the actual middle sensor distance is close to the expected distance
