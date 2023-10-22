@@ -5,6 +5,8 @@ import numpy as np
 # Read the CSV file
 df = pd.read_csv('odometry.csv')
 
+existing_data = pd.read_csv('data_info.csv')
+
 # Convert the pandas series to numpy arrays before plotting
 x = np.array(df['x'])
 y = np.array(df['y'])
@@ -25,10 +27,10 @@ cbar.set_label('Time')
 # Add labels and title
 plt.xlabel('X')
 plt.ylabel('Y')
-plt.title('Graph of y vs x with Time as color')
+plt.title('Path with LIDAR frequency')
 
 # Show the plot
-plt.savefig('data_image.png')
+plt.savefig('data_image_freq.png')
 plt.show()
 
 # ----------------------------
@@ -51,4 +53,5 @@ data = pd.DataFrame({
 
 
 # Write the new data to a CSV file
-data.to_csv('data_info.csv', index=False)
+combined_data = pd.concat([existing_data, data], ignore_index=True)
+combined_data.to_csv('data_info.csv', index=False)
