@@ -1,4 +1,3 @@
-project/build
-project/install
-project/log
-project/flatland
+/build
+/install
+/log
