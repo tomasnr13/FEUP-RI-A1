@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import csv
 from random import random, uniform
 from math import radians, inf, isnan, pi, cos, sin, sqrt, asin
 from numpy import polyfit, polyval
@@ -7,7 +8,8 @@ from numpy import polyfit, polyval
 import rclpy
 from rclpy.publisher import Publisher
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, Pose2D
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 import time
 
@@ -16,9 +18,8 @@ FINAL_WALL_LENGTH = 3.89
 
 
 MAX_ANG_VEL = 3.0
-MIN_ANG_VEL = 1.5
 MAX_LIN_VEL = 2.5
-LOW_LIN_VEL = 1.0
+
 class Turtle(Node):
     def __init__(self) -> None:
         super().__init__("Turtle")
@@ -30,6 +31,32 @@ class Turtle(Node):
         open(self.file_path, 'w').close()
 
         self.laserscan = self.create_subscription(LaserScan, "/scan", self._processScan, 1)
+
+
+        #random orientation
+        self.twist.angular.z = random()*2*pi-pi
+        self._moveRobot()
+        time.sleep(3)
+          
+        #create odometry register
+        self.seq = 0
+        self._create_odometry_register()
+
+        self.odometry = self.create_subscription(
+                Odometry, "/odometry/ground_truth", self._odometryGroundTruth, 1
+            )
+
+    def _create_odometry_register(self):
+        # Create a new file
+        with open('odometry.csv', 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["seq","time","x","y"])
+
+    def _odometryGroundTruth(self, odometry):
+        self.seq += 1
+        with open('odometry.csv', 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([self.seq,odometry.header.stamp.sec + odometry.header.stamp.nanosec / 1000000000,odometry.pose.pose.position.x,odometry.pose.pose.position.y])
 
     def _writeToFile(self, line):
         with open(self.file_path, 'a') as file:
@@ -72,11 +99,12 @@ class Turtle(Node):
         lidar = [(angle, distance) for angle, distance in lidar if not isnan(distance)]
 
         # If there are not enough readings, return False
-        if len(lidar) < 2:
+        if len(lidar) < 3:
             return False
 
-        # Find the first and last non-nan values
+        # Find the first, middle and last non-nan values
         first_non_nan = lidar[0]
+        middle_non_nan = lidar[len(lidar) // 2]
         last_non_nan = lidar[-1]
 
         # Calculate the distance between the two points
@@ -86,31 +114,27 @@ class Turtle(Node):
 
         # Check if the distance is within the interval [3.89 +/- 0.1]
         if 3.79 <= laser_distance <= 3.99:
-            print("distance detected",flush=True)
-            # Fit a line to the data
-            angles = [angle for angle, distance in lidar]
-            distances = [distance for angle, distance in lidar]
-            coefficients = polyfit(angles, distances, 1)
-
-            # Measure how well the data fits this line
-            fit_error = sum((polyval(coefficients, angle) - distance)**2 for angle, distance in lidar)
-            print(fit_error,flush=True)
-
-            # If the fit error is below a certain threshold, stop the robot
-            if fit_error < 2.2:  # Adjust this threshold as needed
-                print("stop detected",flush=True)
-                self.twist.linear.x = 0.0
-                self.twist.angular.z = 0.0
-                self._moveRobot()
-                return True
+            if abs(first_non_nan[1]-last_non_nan[1]) < 0.1:
+                # Calculate the expected distance of the middle sensor using Pythagorean theorem
+                expected_middle_distance = sqrt((first_non_nan[1]**2 + last_non_nan[1]**2) / 4)
+                # Check if the actual middle sensor distance is close to the expected distance
+                if abs(middle_non_nan[1] - expected_middle_distance) < 0.1:
+                    for angle, distance in lidar:
+                        self._writeToFile(f'angle, dist: {str(angle)}, {str(distance)}')
+                    self.twist.linear.x = 0.0
+                    self.twist.angular.z = 0.0
+                    self._moveRobot()
+                    return True
 
         return False
+
 
     def _reactToLidar(self, lidar):
 
         if self._detectStop(lidar):
             self._moveRobot()
             self.destroy_subscription(self.laserscan)
+            self.destroy_subscription(self.odometry)
             return
 
         # Check for walls on the left back or right back
@@ -130,7 +154,7 @@ class Turtle(Node):
         else:
             return self._followWall(lidar)
         
-    def _normalizeAsin(self, value, range):
+    def _normalizeAngle(self, value, range):
         if value < -range:
             value = -range
         elif value > range:
@@ -148,16 +172,16 @@ class Turtle(Node):
 
         if distance < WALL_DISTANCE_THRESHOLD:
             # If we are closer to the wall than desired, turn away from the wall
-            self.twist.angular.z = MAX_ANG_VEL * (WALL_DISTANCE_THRESHOLD - distance)
-            self.twist.linear.x = LOW_LIN_VEL
+            self.twist.angular.z = MAX_ANG_VEL * (WALL_DISTANCE_THRESHOLD - distance)*0.6
         elif distance > WALL_DISTANCE_THRESHOLD:
             # If we are farther from the wall than desired, turn towards the wall
-            self.twist.angular.z = -MAX_ANG_VEL *(WALL_DISTANCE_THRESHOLD - distance)
-            self.twist.linear.x = LOW_LIN_VEL
+            self.twist.angular.z = -MAX_ANG_VEL *(WALL_DISTANCE_THRESHOLD - distance)*0.6
+            # self.twist.angular.z = -MAX_ANG_VEL *self._normalizeAngle(angle, pi/2)
 
         if frontDistance != inf:
             angleRobotWall = asin(max(-1, min(distance/frontDistance, 1)))
-            self.twist.angular.z += self._normalizeAsin(angleRobotWall, pi/2) * 2.0
+            self.twist.angular.z += self._normalizeAngle(angleRobotWall, pi/2) * 2.0
+
 
         self.twist.linear.x = MAX_LIN_VEL
 
