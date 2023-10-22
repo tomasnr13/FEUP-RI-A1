@@ -16,14 +16,13 @@ This project involves creating a 2D robot that reactively follows a wall. The ro
 - Install ROS-2 Humble following the instructions [here](hhttps://docs.ros.org/en/humble/Installation.html)
 
 ## Usage
-
+- Open terminal and source ROS installation using the command `source /opt/ros/humble/setup.bash`
 - Create a new workspace using the command `mkdir -p ~/ros2_ws/src`
 - Navigate to the workspace using the command `cd ~/ros2_ws`
 - Build the workspace using the command `colcon build`
-- Source the workspace using the command `source /opt/ros/humble/setup.bash`
-- Copy the contents of the repository into the src folder of the workspace
+- Copy the contents of the repository into the src folder of the workspace (clone or unzip)
+- Go to the parent folder of the workspace `cd ~/ros2_ws` and check for any missing dependencies using the command `rosdep install -i --from-path src --rosdistro humble -y`
 - Open a terminal in the folder you just copied the contents to
-- Check for any missing dependencies using the command `rosdep install -i --from-path src --rosdistro humble -y`
 - Build the workspace using the command `colcon build`
 - Source the workspace using the command `source install/setup.bash`
 - Run the launch file using the command `ros2 launch turtle turtle.launch.py`
