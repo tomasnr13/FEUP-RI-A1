@@ -28,6 +28,7 @@ plt.ylabel('Y')
 plt.title('Graph of y vs x with Time as color')
 
 # Show the plot
+plt.savefig('data_image.png')
 plt.show()
 
 # ----------------------------
